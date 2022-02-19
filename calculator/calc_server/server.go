@@ -15,7 +15,7 @@ type server struct {
 }
 
 func (*server) Calculate(ctx context.Context, req *calculatorpb.CalcRequest) (*calculatorpb.CalcResponse, error) {
-	fmt.Printf("Greet function was invoked with %v\n", req)
+	fmt.Printf("Calculate function was invoked with %v\n", req)
 	firstNum := req.GetNums().GetFirstNum()
 	secondNum := req.GetNums().GetSecondNum()
 	result := firstNum + secondNum
