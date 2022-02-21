@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 type CalcServiceClient interface {
 	// Unary
 	Calculate(ctx context.Context, in *CalcRequest, opts ...grpc.CallOption) (*CalcResponse, error)
+	// Server Streaming RPC
+	PrimeNumDecomp(ctx context.Context, in *PrimeNumDecompRequest, opts ...grpc.CallOption) (CalcService_PrimeNumDecompClient, error)
 }
 
 type calcServiceClient struct {
@@ -39,12 +41,46 @@ func (c *calcServiceClient) Calculate(ctx context.Context, in *CalcRequest, opts
 	return out, nil
 }
 
+func (c *calcServiceClient) PrimeNumDecomp(ctx context.Context, in *PrimeNumDecompRequest, opts ...grpc.CallOption) (CalcService_PrimeNumDecompClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CalcService_ServiceDesc.Streams[0], "/calculator.CalcService/PrimeNumDecomp", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &calcServicePrimeNumDecompClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CalcService_PrimeNumDecompClient interface {
+	Recv() (*PrimeNumDecomResponse, error)
+	grpc.ClientStream
+}
+
+type calcServicePrimeNumDecompClient struct {
+	grpc.ClientStream
+}
+
+func (x *calcServicePrimeNumDecompClient) Recv() (*PrimeNumDecomResponse, error) {
+	m := new(PrimeNumDecomResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CalcServiceServer is the server API for CalcService service.
 // All implementations must embed UnimplementedCalcServiceServer
 // for forward compatibility
 type CalcServiceServer interface {
 	// Unary
 	Calculate(context.Context, *CalcRequest) (*CalcResponse, error)
+	// Server Streaming RPC
+	PrimeNumDecomp(*PrimeNumDecompRequest, CalcService_PrimeNumDecompServer) error
 	mustEmbedUnimplementedCalcServiceServer()
 }
 
@@ -54,6 +90,9 @@ type UnimplementedCalcServiceServer struct {
 
 func (UnimplementedCalcServiceServer) Calculate(context.Context, *CalcRequest) (*CalcResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Calculate not implemented")
+}
+func (UnimplementedCalcServiceServer) PrimeNumDecomp(*PrimeNumDecompRequest, CalcService_PrimeNumDecompServer) error {
+	return status.Errorf(codes.Unimplemented, "method PrimeNumDecomp not implemented")
 }
 func (UnimplementedCalcServiceServer) mustEmbedUnimplementedCalcServiceServer() {}
 
@@ -86,6 +125,27 @@ func _CalcService_Calculate_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CalcService_PrimeNumDecomp_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PrimeNumDecompRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CalcServiceServer).PrimeNumDecomp(m, &calcServicePrimeNumDecompServer{stream})
+}
+
+type CalcService_PrimeNumDecompServer interface {
+	Send(*PrimeNumDecomResponse) error
+	grpc.ServerStream
+}
+
+type calcServicePrimeNumDecompServer struct {
+	grpc.ServerStream
+}
+
+func (x *calcServicePrimeNumDecompServer) Send(m *PrimeNumDecomResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // CalcService_ServiceDesc is the grpc.ServiceDesc for CalcService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -98,6 +158,12 @@ var CalcService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CalcService_Calculate_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "calculator/calcpb/calc.proto",
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "PrimeNumDecomp",
+			Handler:       _CalcService_PrimeNumDecomp_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "calculator/calculatorpb/calc.proto",
 }

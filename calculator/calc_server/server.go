@@ -25,6 +25,25 @@ func (*server) Calculate(ctx context.Context, req *calculatorpb.CalcRequest) (*c
 	return &res, nil
 }
 
+func (*server) PrimeNumDecomp(req *calculatorpb.PrimeNumDecompRequest, stream calculatorpb.CalcService_PrimeNumDecompServer) error {
+	fmt.Printf("PrimeNumDecomp function was invoked with %v\n", req)
+	num := req.GetNum()
+	var k int32 = 2
+	for num > 1 {
+		if num%k == 0 {
+			res := &calculatorpb.PrimeNumDecomResponse{
+				Result: k,
+			}
+			stream.Send(res)
+			num = num / k
+		} else {
+			k = k + 1
+		}
+		//time.Sleep(1000 * time.Millisecond)
+	}
+	return nil
+}
+
 func main() {
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")

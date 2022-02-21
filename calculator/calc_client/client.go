@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"grpc-go-course/calculator/calculatorpb"
+	"io"
 	"log"
 
 	"google.golang.org/grpc"
@@ -21,7 +22,8 @@ func main() {
 
 	c := calculatorpb.NewCalcServiceClient(cc)
 	// fmt.Printf("Created client: %f", c)
-	doUnary(c)
+	//doUnary(c)
+	doServerStreaming(c)
 
 }
 
@@ -40,4 +42,26 @@ func doUnary(c calculatorpb.CalcServiceClient) {
 	}
 	log.Printf("Response from Calculate: %v", res.Result)
 
+}
+
+func doServerStreaming(c calculatorpb.CalcServiceClient) {
+	fmt.Println("Starting to do a Server Streaming RPC...")
+	req := &calculatorpb.PrimeNumDecompRequest{
+		Num: 120,
+	}
+	resStream, err := c.PrimeNumDecomp(context.Background(), req)
+	if err != nil {
+		log.Fatalf("error while calling PrimeNumDecomp RPC: %v", err)
+	}
+	for {
+		msg, err := resStream.Recv()
+		if err == io.EOF {
+			// stream has been closed
+			break
+		}
+		if err != nil {
+			log.Fatalf("error while reading stream: %v", err)
+		}
+		log.Printf("Response from doServerStreaming: %v", msg.GetResult())
+	}
 }
